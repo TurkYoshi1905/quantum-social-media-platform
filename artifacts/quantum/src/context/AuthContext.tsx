@@ -16,6 +16,7 @@ interface AuthContextType {
   currentUser: User | null;
   login: (user: Partial<User>) => void;
   logout: () => void;
+  updateAvatar: (avatar: string) => void;
 }
 
 const STORAGE_KEY = "quantum_user";
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: userData.displayName ?? "Kullanıcı",
       username: userData.username ?? "kullanici",
       email: userData.email ?? "",
-      avatar: userData.avatar ?? `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 1}`,
+      avatar: userData.avatar ?? "",
       joinDate: JOIN_DATE,
       following: 0,
       followers: 0,
@@ -67,8 +68,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(null);
   };
 
+  const updateAvatar = (avatar: string) => {
+    setCurrentUser((prev) => (prev ? { ...prev, avatar } : prev));
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!currentUser, currentUser, login, logout }}>
+    <AuthContext.Provider value={{ isLoggedIn: !!currentUser, currentUser, login, logout, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   );

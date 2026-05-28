@@ -11,6 +11,24 @@ const navItems = [
   { icon: User, label: "Profil", href: "/profile" },
 ];
 
+function SidebarAvatar({ src, displayName }: { src: string; displayName: string }) {
+  const initials = displayName?.trim().charAt(0).toUpperCase() || "?";
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt="avatar"
+        className="w-9 h-9 rounded-full object-cover ring-2 ring-border shrink-0"
+      />
+    );
+  }
+  return (
+    <div className="w-9 h-9 rounded-full ring-2 ring-border shrink-0 bg-primary/20 flex items-center justify-center select-none">
+      <span className="text-primary font-bold text-sm leading-none">{initials}</span>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const [location] = useLocation();
   const { currentUser, logout } = useAuth();
@@ -53,10 +71,9 @@ export function Sidebar() {
         <div className="mt-auto space-y-1">
           <Link href="/profile">
             <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-sidebar-accent transition-colors duration-150 cursor-pointer">
-              <img
-                src={currentUser?.avatar ?? "https://i.pravatar.cc/150?img=3"}
-                alt="avatar"
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-border shrink-0"
+              <SidebarAvatar
+                src={currentUser?.avatar ?? ""}
+                displayName={currentUser?.displayName ?? ""}
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-sidebar-foreground truncate">{currentUser?.displayName}</p>

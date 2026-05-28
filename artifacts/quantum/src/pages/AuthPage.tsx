@@ -7,16 +7,36 @@ import { useLocation } from "wouter";
 
 type AuthMode = "login" | "register-email" | "register-google";
 
+function FieldError({ message }: { message: string }) {
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.p
+          initial={{ opacity: 0, height: 0, marginTop: 0 }}
+          animate={{ opacity: 1, height: "auto", marginTop: 4 }}
+          exit={{ opacity: 0, height: 0, marginTop: 0 }}
+          transition={{ duration: 0.18 }}
+          className="text-destructive text-xs pl-1"
+        >
+          {message}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function PasswordInput({
   value,
   onChange,
   placeholder,
   testId,
+  hasError,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   testId: string;
+  hasError?: boolean;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -28,7 +48,11 @@ function PasswordInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-muted/50 border border-input rounded-xl px-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition"
+        className={`w-full bg-muted/50 border rounded-xl px-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 transition ${
+          hasError
+            ? "border-destructive focus:ring-destructive/30"
+            : "border-input focus:ring-primary/40 focus:border-primary/50"
+        }`}
       />
       <button
         type="button"
@@ -51,42 +75,67 @@ export default function AuthPage() {
 
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [loginErrors, setLoginErrors] = useState({ username: "", password: "" });
 
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [usernameError, setUsernameError] = useState("");
+  const [registerErrors, setRegisterErrors] = useState({
+    displayName: "",
+    username: "",
+    email: "",
+    password: "",
+  });
 
   const handleUsernameChange = (v: string) => {
     setUsername(v);
     if (v && !usernameRegex.test(v)) {
-      setUsernameError("Sadece küçük harf, rakam, nokta, alt çizgi ve tire kullanabilirsiniz.");
+      setRegisterErrors((e) => ({
+        ...e,
+        username: "Sadece küçük harf, rakam, nokta, alt çizgi ve tire kullanabilirsiniz.",
+      }));
     } else {
-      setUsernameError("");
+      setRegisterErrors((e) => ({ ...e, username: "" }));
     }
-  };
-
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (usernameError || !username) return;
-    login({
-      displayName: displayName || "Yeni Kullanıcı",
-      username: username || "user",
-      email: email || "user@quantum.app",
-      avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 1}`,
-    });
-    setLocation("/home");
   };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    login({ username: loginUsername || "kullanici", displayName: loginUsername || "Kullanıcı" });
+    const errs = { username: "", password: "" };
+    if (!loginUsername.trim()) errs.username = "Kullanıcı adı boş bırakılamaz.";
+    if (!loginPassword) errs.password = "Şifre boş bırakılamaz.";
+    setLoginErrors(errs);
+    if (errs.username || errs.password) return;
+
+    login({ username: loginUsername.trim(), displayName: loginUsername.trim() });
+    setLocation("/home");
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = { displayName: "", username: "", email: "", password: "" };
+    if (!displayName.trim()) errs.displayName = "Görünen ad boş bırakılamaz.";
+    if (!username.trim()) errs.username = "Kullanıcı adı boş bırakılamaz.";
+    else if (!usernameRegex.test(username))
+      errs.username = "Sadece küçük harf, rakam, nokta, alt çizgi ve tire kullanabilirsiniz.";
+    if (!email.trim()) errs.email = "E-posta boş bırakılamaz.";
+    if (!password) errs.password = "Şifre boş bırakılamaz.";
+    else if (password.length < 6) errs.password = "Şifre en az 6 karakter olmalıdır.";
+    setRegisterErrors(errs);
+    if (errs.displayName || errs.username || errs.email || errs.password) return;
+
+    login({
+      displayName: displayName.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      avatar: "",
+    });
     setLocation("/home");
   };
 
   const handleGoogleLogin = () => {
-    login({ displayName: "Google Kullanıcısı", email: "user@gmail.com", avatar: "https://i.pravatar.cc/150?img=7" });
+    login({ displayName: "Google Kullanıcısı", username: "google_user", email: "user@gmail.com", avatar: "" });
     setLocation("/home");
   };
 
@@ -96,7 +145,6 @@ export default function AuthPage() {
   };
 
   const registerTitle = mode === "register-google" ? "Google ile Hesap Oluştur" : "E-Posta ile Hesap Oluştur";
-
   const isRegister = mode === "register-email" || mode === "register-google";
 
   return (
@@ -136,7 +184,7 @@ export default function AuthPage() {
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 onSubmit={handleRegister}
-                className="space-y-4"
+                className="space-y-3"
               >
                 <div className="text-center mb-2">
                   <h2 className="text-base font-semibold text-foreground">{registerTitle}</h2>
@@ -163,16 +211,25 @@ export default function AuthPage() {
                   </div>
                 )}
 
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    data-testid="input-display-name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Görünen Ad"
-                    className="w-full bg-muted/50 border border-input rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition"
-                    required
-                  />
+                <div>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      data-testid="input-display-name"
+                      value={displayName}
+                      onChange={(e) => {
+                        setDisplayName(e.target.value);
+                        if (e.target.value.trim()) setRegisterErrors((er) => ({ ...er, displayName: "" }));
+                      }}
+                      placeholder="Görünen Ad"
+                      className={`w-full bg-muted/50 border rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 transition ${
+                        registerErrors.displayName
+                          ? "border-destructive focus:ring-destructive/30"
+                          : "border-input focus:ring-primary/40 focus:border-primary/50"
+                      }`}
+                    />
+                  </div>
+                  <FieldError message={registerErrors.displayName} />
                 </div>
 
                 <div>
@@ -184,59 +241,62 @@ export default function AuthPage() {
                       onChange={(e) => handleUsernameChange(e.target.value)}
                       placeholder="Kullanıcı Adı"
                       className={`w-full bg-muted/50 border rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 transition ${
-                        usernameError
+                        registerErrors.username
                           ? "border-destructive focus:ring-destructive/30"
                           : "border-input focus:ring-primary/40 focus:border-primary/50"
                       }`}
-                      required
                     />
                   </div>
-                  <AnimatePresence>
-                    {usernameError && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="text-destructive text-xs mt-1 pl-1"
-                      >
-                        {usernameError}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
+                  <FieldError message={registerErrors.username} />
                 </div>
 
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    data-testid="input-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="E-Posta"
-                    readOnly={mode === "register-google"}
-                    className={`w-full bg-muted/50 border border-input rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none transition ${
-                      mode === "register-google"
-                        ? "opacity-60 cursor-not-allowed"
-                        : "focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
-                    }`}
-                    required
+                <div>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      data-testid="input-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (e.target.value.trim()) setRegisterErrors((er) => ({ ...er, email: "" }));
+                      }}
+                      placeholder="E-Posta"
+                      readOnly={mode === "register-google"}
+                      className={`w-full bg-muted/50 border border-input rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none transition ${
+                        mode === "register-google"
+                          ? "opacity-60 cursor-not-allowed"
+                          : registerErrors.email
+                          ? "border-destructive focus:ring-2 focus:ring-destructive/30"
+                          : "focus:ring-2 focus:ring-primary/40 focus:border-primary/50"
+                      }`}
+                    />
+                  </div>
+                  <FieldError message={registerErrors.email} />
+                </div>
+
+                <div>
+                  <PasswordInput
+                    value={password}
+                    onChange={(v) => {
+                      setPassword(v);
+                      if (v) setRegisterErrors((er) => ({ ...er, password: "" }));
+                    }}
+                    placeholder="Şifre (en az 6 karakter)"
+                    testId="input-password-register"
+                    hasError={!!registerErrors.password}
                   />
+                  <FieldError message={registerErrors.password} />
                 </div>
 
-                <PasswordInput
-                  value={password}
-                  onChange={setPassword}
-                  placeholder="Şifre"
-                  testId="input-password-register"
-                />
-
-                <button
+                <motion.button
                   type="submit"
                   data-testid="button-create-account"
-                  className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity mt-1"
                 >
                   Hesap Oluştur
-                </button>
+                </motion.button>
 
                 <p className="text-center text-xs text-muted-foreground">
                   Zaten hesabınız var mı?{" "}
@@ -258,37 +318,55 @@ export default function AuthPage() {
                 exit={{ opacity: 0, x: 24 }}
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 onSubmit={handleLogin}
-                className="space-y-4"
+                className="space-y-3"
               >
                 <div className="text-center mb-2">
                   <h2 className="text-base font-semibold text-foreground">Giriş Yap</h2>
                 </div>
 
-                <div className="relative">
-                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    data-testid="input-login-username"
-                    value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.value)}
-                    placeholder="Kullanıcı Adı"
-                    className="w-full bg-muted/50 border border-input rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition"
-                  />
+                <div>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      data-testid="input-login-username"
+                      value={loginUsername}
+                      onChange={(e) => {
+                        setLoginUsername(e.target.value);
+                        if (e.target.value.trim()) setLoginErrors((er) => ({ ...er, username: "" }));
+                      }}
+                      placeholder="Kullanıcı Adı"
+                      className={`w-full bg-muted/50 border rounded-xl pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 transition ${
+                        loginErrors.username
+                          ? "border-destructive focus:ring-destructive/30"
+                          : "border-input focus:ring-primary/40 focus:border-primary/50"
+                      }`}
+                    />
+                  </div>
+                  <FieldError message={loginErrors.username} />
                 </div>
 
-                <PasswordInput
-                  value={loginPassword}
-                  onChange={setLoginPassword}
-                  placeholder="Şifre"
-                  testId="input-password-login"
-                />
+                <div>
+                  <PasswordInput
+                    value={loginPassword}
+                    onChange={(v) => {
+                      setLoginPassword(v);
+                      if (v) setLoginErrors((er) => ({ ...er, password: "" }));
+                    }}
+                    placeholder="Şifre"
+                    testId="input-password-login"
+                    hasError={!!loginErrors.password}
+                  />
+                  <FieldError message={loginErrors.password} />
+                </div>
 
-                <button
+                <motion.button
                   type="submit"
                   data-testid="button-login"
-                  className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+                  whileTap={{ scale: 0.97 }}
+                  className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity mt-1"
                 >
                   Giriş Yap
-                </button>
+                </motion.button>
 
                 <div className="relative flex items-center gap-3">
                   <div className="flex-1 h-px bg-border" />
@@ -296,15 +374,16 @@ export default function AuthPage() {
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <button
+                <motion.button
                   type="button"
                   data-testid="button-google-login"
+                  whileTap={{ scale: 0.97 }}
                   onClick={handleGoogleLogin}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-muted border border-border text-foreground text-sm font-medium hover:bg-muted/80 transition-colors"
                 >
                   <SiGoogle className="w-4 h-4" />
                   Google ile Giriş Yap
-                </button>
+                </motion.button>
 
                 <p className="text-center text-xs text-muted-foreground">
                   Hesabınız yok mu?{" "}

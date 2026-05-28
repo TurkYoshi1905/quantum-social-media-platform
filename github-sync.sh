@@ -6,7 +6,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-REPO_URL="https://github.com/TurkYoshi1905/quantum-social-media-platform.git"
+REPO_URL="https://github.com/TurkYoshi1905/quantum.git"
 BRANCH="main"
 COMMIT_MSG="sync: $(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -19,7 +19,7 @@ if [ -z "${GITHUB_PAT:-}" ]; then
   exit 1
 fi
 
-AUTH_URL="https://${GITHUB_PAT}@github.com/TurkYoshi1905/quantum-social-media-platform.git"
+AUTH_URL="https://${GITHUB_PAT}@github.com/TurkYoshi1905/quantum.git"
 
 echo ""
 echo "══════════════════════════════════════════"

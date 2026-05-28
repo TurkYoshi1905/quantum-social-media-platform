@@ -21,12 +21,44 @@ function EmptyTab({ text }: { text: string }) {
   );
 }
 
-export default function ProfilePage() {
-  const { currentUser, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("Gönderiler");
-  const [avatarSrc, setAvatarSrc] = useState(
-    currentUser?.avatar ?? "https://i.pravatar.cc/150?img=3"
+function AvatarDisplay({
+  src,
+  displayName,
+  className,
+  onClick,
+}: {
+  src: string;
+  displayName: string;
+  className?: string;
+  onClick?: () => void;
+}) {
+  const initials = displayName?.trim().charAt(0).toUpperCase() || "?";
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt="profile"
+        data-testid="img-profile-avatar"
+        className={className}
+        onClick={onClick}
+      />
+    );
+  }
+  return (
+    <div
+      data-testid="img-profile-avatar"
+      onClick={onClick}
+      className={`${className} bg-primary/20 flex items-center justify-center select-none`}
+    >
+      <span className="text-primary font-bold text-2xl sm:text-3xl leading-none">{initials}</span>
+    </div>
   );
+}
+
+export default function ProfilePage() {
+  const { currentUser, logout, updateAvatar } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("Gönderiler");
+  const [avatarSrc, setAvatarSrc] = useState(currentUser?.avatar ?? "");
   const fileRef = useRef<HTMLInputElement>(null);
   const [userPosts] = useState<Post[]>([]);
 
@@ -34,7 +66,11 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => setAvatarSrc(ev.target?.result as string);
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setAvatarSrc(result);
+        updateAvatar(result);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -62,19 +98,16 @@ export default function ProfilePage() {
 
       <main className="flex-1 min-w-0 pb-20 md:pb-0 overflow-x-hidden">
         <div className="max-w-2xl mx-auto w-full">
-          {/* Banner */}
           <div className="h-36 sm:h-52 bg-gradient-to-br from-primary/30 via-primary/15 to-background relative overflow-hidden shrink-0">
             <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
           </div>
 
           <div className="px-4 sm:px-6 relative">
-            {/* Avatar + Actions */}
             <div className="flex items-end justify-between -mt-10 sm:-mt-12 mb-4">
               <div className="relative group shrink-0">
-                <img
+                <AvatarDisplay
                   src={avatarSrc}
-                  alt="profile"
-                  data-testid="img-profile-avatar"
+                  displayName={currentUser?.displayName ?? ""}
                   className="w-[72px] h-[72px] sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-background"
                 />
                 <button
@@ -93,7 +126,6 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Mobile logout only — desktop logout is in Sidebar */}
               <button
                 data-testid="button-logout-profile"
                 onClick={logout}
@@ -104,7 +136,6 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            {/* User Info */}
             <div className="mb-5">
               <h1
                 className="text-lg sm:text-xl font-bold text-foreground leading-tight"
@@ -143,7 +174,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Tab Bar — scrollable on mobile */}
             <div className="relative border-b border-border mb-5 -mx-4 sm:-mx-6 px-4 sm:px-6">
               <div className="flex overflow-x-auto scrollbar-hide gap-0 -mb-px">
                 {TABS.map((tab) => (
@@ -170,7 +200,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Tab Content */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
