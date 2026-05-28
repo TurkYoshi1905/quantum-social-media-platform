@@ -4,7 +4,7 @@ import { Compass, Search, Loader2, UserPlus, UserCheck } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { PostCard } from "@/components/PostCard";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import type { PostCardData } from "@/components/PostCard";
 import type { Profile } from "@/lib/supabase";

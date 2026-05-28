@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { PostCard } from "@/components/PostCard";
 import { AvatarModal } from "@/components/AvatarModal";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import type { PostCardData } from "@/components/PostCard";
 

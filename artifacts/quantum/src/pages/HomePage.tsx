@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { PostCard } from "@/components/PostCard";
 import { PostComposer } from "@/components/PostComposer";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import type { Post } from "@/lib/supabase";
 import { Sparkles, Loader2 } from "lucide-react";

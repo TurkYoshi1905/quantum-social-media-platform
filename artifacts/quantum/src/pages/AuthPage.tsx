@@ -4,6 +4,7 @@ import { Eye, EyeOff, AtSign, Lock, User, Mail, CheckCircle2, Loader2, AlertCirc
 import { SiGoogle } from "react-icons/si";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
+// useAuth not needed on AuthPage — Supabase handles session directly
 
 type AuthMode = "login" | "register" | "verify-email";
 

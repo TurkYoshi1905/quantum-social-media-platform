@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Supabase anon key is a PUBLIC key — safe to embed in client-side code.
+// It enforces Row Level Security; only the service role key must stay secret.
 const supabaseUrl = 'https://dtitryfpcciyudmbcihc.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-if (!supabaseAnonKey) {
-  throw new Error('VITE_SUPABASE_ANON_KEY is not set');
-}
+const supabaseAnonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0aXRyeWZwY2NpeXVkbWJjaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4OTUxMjMsImV4cCI6MjA5NTQ3MTEyM30.T4xXx9kAtYFl361ZDHvMU6Egd0cYA6MU00T27aK75kA';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

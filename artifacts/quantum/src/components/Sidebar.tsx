@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Home, Compass, Bell, Mail, User, LogOut } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 

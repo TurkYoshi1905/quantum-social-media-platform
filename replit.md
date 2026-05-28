@@ -4,14 +4,14 @@ Quantum, Twitter ve Instagram'ın temel mantığını birleştiren; premium dark
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/quantum run dev` — Quantum frontend geliştirme sunucusunu çalıştır
+- `pnpm --filter @workspace/quantum run dev` — Quantum frontend geliştirme sunucusunu çalıştır (port 5000)
 - `pnpm run typecheck` — tüm paketlerde tam tip kontrolü
 - `pnpm run build` — typecheck + tüm paketleri derle
-- `bash github-sync.sh` — projeyi GitHub'a senkronize et (GITHUB_PAT gerekli)
+- `bash github-sync.sh` — projeyi GitHub'a senkronize et (Shell sekmesinden çalıştırılmalı, GITHUB_PAT gerekli)
 
 ## Stack
 
-- **Frontend:** React 19, TypeScript, Vite
+- **Frontend:** React 19, TypeScript, Vite 7
 - **Backend:** Supabase (Auth, PostgreSQL, Realtime, Storage)
 - **Styling:** Tailwind CSS v4, Framer Motion
 - **Routing:** wouter
@@ -23,33 +23,34 @@ Quantum, Twitter ve Instagram'ın temel mantığını birleştiren; premium dark
 ## Supabase Yapılandırması
 
 - **URL:** https://dtitryfpcciyudmbcihc.supabase.co
-- **VITE_SUPABASE_ANON_KEY** — Replit Secrets'ta saklanır
-- **SUPABASE_SERVICE_ROLE_KEY** — Replit Secrets'ta saklanır
+- **VITE_SUPABASE_ANON_KEY** — Replit Secrets'ta saklanır (public key, build'e gömülür)
+- **SUPABASE_SERVICE_ROLE_KEY** — Replit Secrets'ta saklanır (asla client'a expose edilmez)
 - **schema.sql** — Tüm tablo yapıları, trigger'lar ve Realtime ayarları
 
 ## Where things live
 
 ```
 artifacts/quantum/src/
-├── App.tsx                      # Routing + AuthProvider + loading states
+├── App.tsx                      # Routing + ProtectedRoute + AuthRoute + loading states
 ├── context/AuthContext.tsx      # Supabase auth state + profile yönetimi
-├── lib/supabase.ts              # Supabase client + TypeScript tipleri
-├── data/mockData.ts             # Legacy tip tanımları (eski)
+├── lib/supabase.ts              # Supabase client + TypeScript tipleri (anon key fallback)
+├── data/mockData.ts             # Legacy tip tanımları (geriye dönük uyumluluk)
 ├── pages/
 │   ├── AuthPage.tsx             # Giriş/Kayıt + e-posta doğrulama bekleme
-│   ├── EmailVerifiedPage.tsx    # E-posta doğrulama başarı sayfası
+│   ├── EmailVerifiedPage.tsx    # E-posta doğrulama başarı sayfası + oto-yönlendirme
 │   ├── HomePage.tsx             # Feed + PostComposer (Supabase realtime)
-│   ├── ProfilePage.tsx          # Profil + sekme verileri + premium avatar modal
-│   ├── ExplorePage.tsx          # Arama / Keşfet
-│   ├── NotificationsPage.tsx    # Gerçek zamanlı bildirimler
-│   └── MessagesPage.tsx         # Mesajlar
+│   ├── ProfilePage.tsx          # Profil + sekme verileri + AvatarModal entegrasyonu
+│   ├── ExplorePage.tsx          # Supabase arama (gönderi + kişi) + takip et/bırak
+│   ├── NotificationsPage.tsx    # Gerçek zamanlı bildirimler + okundu işaretleme
+│   └── MessagesPage.tsx         # Mesajlar (yakında)
 ├── components/
-│   ├── PostCard.tsx             # Gönderi kartı (Supabase entegrasyonlu)
-│   ├── PostComposer.tsx         # Gönderi oluşturma
-│   ├── Sidebar.tsx              # Masaüstü navigasyon + bildirim badge
-│   └── BottomNav.tsx            # Mobil navigasyon + bildirim badge
+│   ├── PostCard.tsx             # Gönderi kartı (UUID, AvatarFallback, yorum silme)
+│   ├── PostComposer.tsx         # Gönderi oluşturma (AvatarFallback)
+│   ├── AvatarModal.tsx          # Premium avatar modal — sürükle & bırak, önizleme, kaydet
+│   ├── Sidebar.tsx              # Masaüstü navigasyon + realtime bildirim badge
+│   └── BottomNav.tsx            # Mobil navigasyon + realtime bildirim badge
 └── index.css                    # Tema (dark palette), Google Fonts import
-schema.sql                       # Supabase veritabanı şeması
+schema.sql                       # Supabase veritabanı şeması (tablolar + triggerlar + RLS)
 ```
 
 ## Architecture Decisions
@@ -57,34 +58,38 @@ schema.sql                       # Supabase veritabanı şeması
 - **Supabase Auth:** E-posta/şifre + Google OAuth. Kullanıcı kayıt olduğunda trigger ile profil otomatik oluşturulur.
 - **E-posta Doğrulama:** Kayıt sonrası doğrulama e-postası gönderilir. Kullanıcı linke tıklayınca `/auth/verified` sayfasına yönlendirilir.
 - **Kullanıcı adı ile giriş:** Login formunda hem e-posta hem kullanıcı adı kabul edilir.
-- **Realtime:** posts, comments, likes, reposts, follows, notifications tabloları Supabase Realtime ile canlı.
-- **Trigger'lar:** like/repost/comment/follow işlemleri otomatik olarak sayaçları günceller ve bildirim oluşturur.
+- **Realtime:** posts, notifications tabloları Supabase Realtime ile canlı dinlenir.
+- **Trigger'lar:** like/repost/comment/follow işlemleri sayaçları ve bildirimleri otomatik günceller.
+- **Optimistic UI:** Beğeni/repost anlık UI'da güncellenir, sonra DB'ye yazılır.
+- **VITE_SUPABASE_ANON_KEY fallback:** supabase.ts env var'ı önce okur, yoksa hardcoded public key'e düşer — production build hatası olmaz.
+- **AvatarModal ayrı dosya:** `components/AvatarModal.tsx` — bağımsız, yeniden kullanılabilir.
 - **Dark-first tema:** CSS custom properties ile tam karanlık paleti.
 - **Font ayrımı:** `font-display` (Montserrat) yalnızca "Quantum" logolarında; `font-sans` (Inter) diğer her şeyde.
-- **Avatar:** Boşsa initials gösterilir. Premium modal ile sürükle-bırak yükleme desteklenir.
-- **Bildirim badge:** Sidebar ve BottomNav'da okunmamış bildirim sayısı anlık güncellenir.
+- **Avatar fallback:** Boşsa initials gösterilir. AvatarModal ile sürükle-bırak yükleme desteklenir.
+- **Bildirim badge:** Sidebar ve BottomNav'da okunmamış bildirim sayısı realtime güncellenir.
 
 ## Veritabanı Tabloları
 
 | Tablo | Açıklama |
 |-------|----------|
-| `profiles` | Kullanıcı profilleri (auth.users ile ilişkili) |
-| `posts` | Gönderiler |
+| `profiles` | Kullanıcı profilleri (auth.users ile ilişkili, trigger ile otomatik oluşturulur) |
+| `posts` | Gönderiler (likes/reposts/comments/views sayaçları dahil) |
 | `comments` | Yorumlar |
-| `likes` | Beğeniler |
-| `reposts` | Yeniden gönderiler |
-| `follows` | Takip ilişkileri |
-| `notifications` | Gerçek zamanlı bildirimler |
+| `likes` | Beğeniler (unique: post_id + user_id) |
+| `reposts` | Yeniden gönderiler (unique: post_id + user_id) |
+| `follows` | Takip ilişkileri (kendini takip etme kısıtı) |
+| `notifications` | Gerçek zamanlı bildirimler (like/repost/comment/follow türleri) |
 
 ## Product
 
 - **Auth:** E-posta/şifre veya Google OAuth ile kayıt/giriş
 - **E-posta doğrulama:** Premium bekleme sayfası → doğrulama → otomatik yönlendirme
-- **Kullanıcı adı kontrolü:** Kayıt sırasında anlık veritabanı kontrolü + animasyonlu hata
-- **Feed:** Gerçek zamanlı; beğeni/repost/yorum anlık güncellenir
-- **Profil:** Premium avatar modal (sürükle-bırak), sekmeli içerik (Supabase'den)
-- **Bildirimler:** Gerçek zamanlı; okundu işaretleme, badge sayacı
-- **GitHub sync:** `bash github-sync.sh` ile GITHUB_PAT üzerinden push
+- **Kullanıcı adı kontrolü:** Kayıt sırasında anlık veritabanı kontrolü + animasyonlu hata kutusu
+- **Feed:** Gerçek zamanlı; beğeni/repost/yorum anlık güncellenir, optimistic UI
+- **Profil:** AvatarModal (sürükle-bırak), sekmeli içerik (Supabase'den), bio, istatistikler
+- **Bildirimler:** Gerçek zamanlı; okundu işaretleme, badge sayacı Sidebar + BottomNav'da
+- **Keşfet:** Supabase ile gönderi ve kişi arama, takip et/bırak
+- **GitHub sync:** Shell sekmesinden `bash github-sync.sh` ile GITHUB_PAT üzerinden push
 
 ## Feature & Page Development Standards
 
@@ -122,14 +127,16 @@ schema.sql                       # Supabase veritabanı şeması
 - Tüm diğer metinler Inter fontu kullanır.
 - Uygulama dark mod varsayılanıyla açılır.
 - Mock veri yoktur; platform gerçekten Supabase'den büyür.
-- GitHub senkronizasyonu için `GITHUB_PAT` Replit Secrets'a eklenmelidir.
+- GitHub senkronizasyonu Shell sekmesinden `bash github-sync.sh` ile yapılır.
 
 ## Gotchas
 
 - `index.css`'in ilk satırı mutlaka Google Fonts `@import url(...)` olmalı.
 - Quantum workflow'u port `5000` kullanır.
 - Supabase tabloları `schema.sql` dosyasındaki SQL ile Supabase SQL Editor'da çalıştırılarak kurulur.
-- `bash github-sync.sh` kullan — `./github-sync.sh` değil.
+- `bash github-sync.sh` Shell sekmesinden çalıştırılmalı — agent sandbox'ı git write işlemlerini kısıtlar.
+- `VITE_SUPABASE_ANON_KEY` Replit Secrets'ta olmalı; yoksa `supabase.ts` hardcoded public key'e düşer.
+- `git commit` / `git push` agent tarafından çalıştırılamaz; Shell sekmesinden yapılır.
 
 ## Pointers
 

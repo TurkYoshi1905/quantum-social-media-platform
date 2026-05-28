@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 
-interface AuthContextType {
+export interface AuthContextType {
   isLoggedIn: boolean;
   currentUser: Profile | null;
   session: Session | null;
@@ -13,7 +13,7 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -34,20 +34,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user.id) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user.id) {
+        fetchProfile(s.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        if (session?.user.id) {
-          await fetchProfile(session.user.id);
+      async (_event, s) => {
+        setSession(s);
+        if (s?.user.id) {
+          await fetchProfile(s.user.id);
         } else {
           setCurrentUser(null);
         }
@@ -76,22 +76,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{
-      isLoggedIn: !!session && !!currentUser,
-      currentUser,
-      session,
-      loading,
-      logout,
-      updateAvatar,
-      refreshProfile,
-    }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: !!session && !!currentUser,
+        currentUser,
+        session,
+        loading,
+        logout,
+        updateAvatar,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
-};
