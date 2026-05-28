@@ -115,4 +115,4 @@ artifacts/quantum/src/
 ## Pointers
 
 - pnpm workspace yapısı için `pnpm-workspace` skill'ini incele.
-- GitHub repo: https://github.com/TurkYoshi1905/quantum-social-media-platform.git
+- GitHub repo: https://github.com/TurkYoshi1905/quantum.git
