@@ -58,6 +58,44 @@ artifacts/quantum/src/
 - Navigasyon: Masaüstü sidebar + mobil alt navigasyon (Keşfet, Bildirimler, Mesajlar, Profil)
 - GitHub sync: `bash github-sync.sh` ile GITHUB_PAT üzerinden otomatik push
 
+## Feature & Page Development Standards
+
+**Her yeni sayfa veya özellik aşağıdaki standartları eksiksiz karşılamalıdır. Bu kurallar pazarlık konusu değildir.**
+
+### Tasarım
+- **Premium his:** Arayüz lüks, temiz ve özgün olmalı. Başka uygulamaların kopyası olmamalı. Her eleman kasıtlı ve özenle yerleştirilmiş görünmeli.
+- **Dark-first:** Tüm bileşenler dark tema üzerine inşa edilir. Renkler `index.css`'teki CSS custom properties kullanılarak tanımlanır; hardcoded renk yazılmaz.
+- **Tipografi kuralına uyum:** "Quantum" kelimesi yalnızca `font-display` (Montserrat) ile yazılır. Diğer tüm metinler `font-sans` (Inter) kullanır. İstisnasız.
+- **İkon tutarlılığı:** `lucide-react` genel ikonlar için, `react-icons/si` marka/şirket logoları için kullanılır. Emoji kullanılmaz.
+
+### Responsive (Mobil + Masaüstü)
+- **Her sayfa hem mobilde hem masaüstünde kusursuz çalışmalıdır.** Biri için yapılıp diğeri için bırakılamaz.
+- Masaüstünde `Sidebar` bileşeni gösterilir (`hidden md:flex`).
+- Mobilde `BottomNav` bileşeni gösterilir (`md:hidden`, `fixed bottom-0`).
+- Mobil taşma (`overflow`) sorunları önceden önlenir: yatay scroll gereken alanlarda `overflow-x-auto scrollbar-hide`, uzun metinlerde `whitespace-nowrap` veya `truncate` kullanılır.
+- Breakpoint sırası: mobil önce (`sm:`, `md:`, `lg:`).
+
+### Animasyon
+- **Framer Motion zorunludur.** Bileşen mount/unmount için `AnimatePresence` kullanılır.
+- Sayfalar arası geçişler, form geçişleri, tab değişimleri, liste öğeleri — hepsi animasyonlu olmalıdır.
+- Mikro-etkileşimler: buton tıklaması (`whileTap`), hover efektleri (`whileHover`), sayı/ikon değişimi animasyonları.
+- Animasyonlar kasıtlı ve hızlı olmalı (genellikle `duration: 0.15–0.3`). Yavaş veya dekoratif amaçsız animasyon kabul edilmez.
+- `layout` prop ile konum geçişleri pürüzsüz yapılır.
+
+### İşlevsellik
+- **Tüm butonlar ve etkileşimli alanlar çalışır durumda olmalıdır.** "Yakında" veya boş handler kabul edilmez.
+- State yönetimi React `useState` / `useContext` ile yapılır. Gerekirse `localStorage`'a kaydedilir.
+- Form validasyonu anlık (`onChange`) olmalı; hata mesajları inline ve animasyonlu gösterilmelidir.
+- Boş durumlar (`empty state`) her liste/feed için tasarlanmalı: ikon + başlık + açıklama.
+- Loading/skeleton state gerektiğinde eklenir.
+
+### Kod Kalitesi
+- Her sayfa `src/pages/`, her bileşen `src/components/` altında ayrı dosyada olmalıdır.
+- TypeScript tip güvenliği eksiksiz olmalı; `any` kullanılmaz.
+- Kullanılmayan import yazılmaz (build hatası verir).
+- `data-testid` attribute'u tüm interaktif elementlere eklenir.
+- Yeni sayfa eklendikten sonra `App.tsx`'e route ve `Sidebar.tsx` + `BottomNav.tsx`'e nav linki eklenmelidir.
+
 ## User preferences
 
 - Quantum kelimesi her zaman Montserrat fontu ile yazılır.

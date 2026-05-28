@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "@/components/Sidebar";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,15 +8,43 @@ import type { Post } from "@/data/mockData";
 import { useAuth } from "@/context/AuthContext";
 import { Sparkles } from "lucide-react";
 
+const POSTS_STORAGE_KEY = "quantum_posts";
+
+function loadPosts(): Post[] {
+  try {
+    const raw = localStorage.getItem(POSTS_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as Post[];
+  } catch {
+    return [];
+  }
+}
+
+function savePosts(posts: Post[]) {
+  try {
+    localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(posts));
+  } catch {
+    // storage quota exceeded, ignore
+  }
+}
+
 export default function HomePage() {
   const { currentUser } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(() => loadPosts());
+
+  useEffect(() => {
+    savePosts(posts);
+  }, [posts]);
 
   const handleLike = (id: number) => {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === id
-          ? { ...p, liked: !p.liked, stats: { ...p.stats, likes: p.liked ? p.stats.likes - 1 : p.stats.likes + 1 } }
+          ? {
+              ...p,
+              liked: !p.liked,
+              stats: { ...p.stats, likes: p.liked ? p.stats.likes - 1 : p.stats.likes + 1 },
+            }
           : p
       )
     );
@@ -26,7 +54,14 @@ export default function HomePage() {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === id
-          ? { ...p, reposted: !p.reposted, stats: { ...p.stats, reposts: p.reposted ? p.stats.reposts - 1 : p.stats.reposts + 1 } }
+          ? {
+              ...p,
+              reposted: !p.reposted,
+              stats: {
+                ...p.stats,
+                reposts: p.reposted ? p.stats.reposts - 1 : p.stats.reposts + 1,
+              },
+            }
           : p
       )
     );
@@ -53,6 +88,24 @@ export default function HomePage() {
                 },
               ],
               stats: { ...p.stats, comments: p.stats.comments + 1 },
+            }
+          : p
+      )
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleDeleteComment = (postId: number, commentId: number) => {
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              comments: p.comments.filter((c) => c.id !== commentId),
+              stats: { ...p.stats, comments: Math.max(0, p.stats.comments - 1) },
             }
           : p
       )
@@ -100,9 +153,12 @@ export default function HomePage() {
                 <PostCard
                   key={post.id}
                   post={post}
+                  currentUsername={currentUser?.username}
                   onLike={handleLike}
                   onRepost={handleRepost}
                   onComment={handleComment}
+                  onDelete={handleDelete}
+                  onDeleteComment={handleDeleteComment}
                 />
               ))}
             </AnimatePresence>
