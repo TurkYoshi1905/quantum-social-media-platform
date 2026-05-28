@@ -1,9 +1,12 @@
+// Legacy type definitions — kept for backward compatibility
+// New code should use types from @/lib/supabase instead
+
 export const mockUser = {
   id: 1,
   displayName: "Alex Kim",
   username: "alexkim",
   email: "alex@quantum.app",
-  avatar: "https://i.pravatar.cc/150?img=3",
+  avatar: "",
   joinDate: "Mayıs 2026",
   following: 0,
   followers: 0,

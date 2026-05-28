@@ -7,6 +7,16 @@ interface PostComposerProps {
   onPost: (post: { title: string; content: string; image?: string }) => void;
 }
 
+function AvatarFallback({ src, name }: { src: string; name: string }) {
+  const initials = name?.trim().charAt(0).toUpperCase() || "?";
+  if (src) return <img src={src} alt={name} className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border" />;
+  return (
+    <div className="w-10 h-10 rounded-full shrink-0 ring-2 ring-border bg-primary/20 flex items-center justify-center select-none">
+      <span className="text-primary font-bold text-sm leading-none">{initials}</span>
+    </div>
+  );
+}
+
 export function PostComposer({ onPost }: PostComposerProps) {
   const { currentUser } = useAuth();
   const [title, setTitle] = useState("");
@@ -35,17 +45,11 @@ export function PostComposer({ onPost }: PostComposerProps) {
 
   return (
     <motion.div
-      className={`bg-card border rounded-2xl p-4 sm:p-5 transition-all duration-200 ${
-        focused ? "border-primary/40 shadow-lg shadow-primary/5" : "border-card-border"
-      }`}
+      className={`bg-card border rounded-2xl p-4 sm:p-5 transition-all duration-200 ${focused ? "border-primary/40 shadow-lg shadow-primary/5" : "border-card-border"}`}
       layout
     >
       <div className="flex gap-3">
-        <img
-          src={currentUser?.avatar ?? "https://i.pravatar.cc/150?img=3"}
-          alt="avatar"
-          className="w-10 h-10 rounded-full object-cover shrink-0 ring-2 ring-border"
-        />
+        <AvatarFallback src={currentUser?.avatar_url ?? ""} name={currentUser?.display_name ?? ""} />
         <div className="flex-1 space-y-2">
           <AnimatePresence>
             {(focused || title) && (
@@ -109,13 +113,7 @@ export function PostComposer({ onPost }: PostComposerProps) {
                   <ImageIcon className="w-4 h-4" />
                   <span>Resim</span>
                 </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageSelect}
-                />
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
                 <div className="flex-1" />
                 <button
                   data-testid="button-cancel-post"

@@ -1,79 +1,90 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-
-export type User = {
-  id: number;
-  displayName: string;
-  username: string;
-  email: string;
-  avatar: string;
-  joinDate: string;
-  following: number;
-  followers: number;
-};
+import { supabase } from "@/lib/supabase";
+import type { Profile } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
   isLoggedIn: boolean;
-  currentUser: User | null;
-  login: (user: Partial<User>) => void;
-  logout: () => void;
-  updateAvatar: (avatar: string) => void;
-}
-
-const STORAGE_KEY = "quantum_user";
-
-function loadFromStorage(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as User;
-  } catch {
-    return null;
-  }
-}
-
-function saveToStorage(user: User | null) {
-  if (user) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-  } else {
-    localStorage.removeItem(STORAGE_KEY);
-  }
+  currentUser: Profile | null;
+  session: Session | null;
+  loading: boolean;
+  logout: () => Promise<void>;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const JOIN_DATE = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" }).format(new Date());
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => loadFromStorage());
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    if (data) setCurrentUser(data);
+  };
+
+  const refreshProfile = async () => {
+    if (session?.user.id) await fetchProfile(session.user.id);
+  };
 
   useEffect(() => {
-    saveToStorage(currentUser);
-  }, [currentUser]);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user.id) {
+        fetchProfile(session.user.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    });
 
-  const login = (userData: Partial<User>) => {
-    const user: User = {
-      id: Date.now(),
-      displayName: userData.displayName ?? "Kullanıcı",
-      username: userData.username ?? "kullanici",
-      email: userData.email ?? "",
-      avatar: userData.avatar ?? "",
-      joinDate: JOIN_DATE,
-      following: 0,
-      followers: 0,
-    };
-    setCurrentUser(user);
-  };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setSession(session);
+        if (session?.user.id) {
+          await fetchProfile(session.user.id);
+        } else {
+          setCurrentUser(null);
+        }
+        setLoading(false);
+      }
+    );
 
-  const logout = () => {
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setCurrentUser(null);
+    setSession(null);
   };
 
-  const updateAvatar = (avatar: string) => {
-    setCurrentUser((prev) => (prev ? { ...prev, avatar } : prev));
+  const updateAvatar = async (avatarUrl: string) => {
+    if (!session?.user.id) return;
+    const { data } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", session.user.id)
+      .select()
+      .single();
+    if (data) setCurrentUser(data);
   };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn: !!currentUser, currentUser, login, logout, updateAvatar }}>
+    <AuthContext.Provider value={{
+      isLoggedIn: !!session && !!currentUser,
+      currentUser,
+      session,
+      loading,
+      logout,
+      updateAvatar,
+      refreshProfile,
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -10,42 +10,57 @@ import ProfilePage from "@/pages/ProfilePage";
 import ExplorePage from "@/pages/ExplorePage";
 import NotificationsPage from "@/pages/NotificationsPage";
 import MessagesPage from "@/pages/MessagesPage";
+import EmailVerifiedPage from "@/pages/EmailVerifiedPage";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoggedIn) setLocation("/auth");
-  }, [isLoggedIn, setLocation]);
+    if (!loading && !isLoggedIn) setLocation("/auth");
+  }, [isLoggedIn, loading, setLocation]);
 
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
   if (!isLoggedIn) return null;
   return <Component />;
 }
 
 function AuthRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (isLoggedIn) setLocation("/home");
-  }, [isLoggedIn, setLocation]);
+    if (!loading && isLoggedIn) setLocation("/home");
+  }, [isLoggedIn, loading, setLocation]);
 
+  if (loading) return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
   if (isLoggedIn) return null;
   return <Component />;
 }
 
 function RootRedirect() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    setLocation(isLoggedIn ? "/home" : "/auth");
-  }, [isLoggedIn, setLocation]);
+    if (!loading) setLocation(isLoggedIn ? "/home" : "/auth");
+  }, [isLoggedIn, loading, setLocation]);
 
-  return null;
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
 }
 
 function Router() {
@@ -53,6 +68,7 @@ function Router() {
     <Switch>
       <Route path="/" component={RootRedirect} />
       <Route path="/auth">{() => <AuthRoute component={AuthPage} />}</Route>
+      <Route path="/auth/verified" component={EmailVerifiedPage} />
       <Route path="/home">{() => <ProtectedRoute component={HomePage} />}</Route>
       <Route path="/profile">{() => <ProtectedRoute component={ProfilePage} />}</Route>
       <Route path="/explore">{() => <ProtectedRoute component={ExplorePage} />}</Route>
