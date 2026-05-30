@@ -218,28 +218,17 @@ export default function AuthPage() {
     if (errs.identifier || errs.password) return;
 
     setLoginLoading(true);
-    // Kullanıcı adıyla giriş desteği: önce profil tablosundan e-posta bul
+    // Kullanıcı adıyla giriş desteği: güvenli RPC fonksiyonu ile e-posta bul
     let emailToUse = loginIdentifier.trim();
     if (!emailToUse.includes("@")) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", emailToUse)
-        .maybeSingle();
-      if (!profile) {
+      const { data: foundEmail, error: rpcError } = await supabase
+        .rpc("get_email_by_username", { p_username: emailToUse });
+      if (rpcError || !foundEmail) {
         setLoginErrors((e) => ({ ...e, general: "Kullanıcı adı veya şifre hatalı." }));
         setLoginLoading(false);
         return;
       }
-      // Auth'dan email'i almak için — user.id ile lookup
-      const { data: userData } = await supabase.auth.admin?.getUserById?.(profile.id) ?? { data: null };
-      if (userData?.user?.email) {
-        emailToUse = userData.user.email;
-      } else {
-        setLoginErrors((e) => ({ ...e, general: "Kullanıcı adı veya şifre hatalı." }));
-        setLoginLoading(false);
-        return;
-      }
+      emailToUse = foundEmail as string;
     }
 
     const { error } = await supabase.auth.signInWithPassword({
