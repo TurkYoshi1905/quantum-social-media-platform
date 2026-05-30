@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm --filter @workspace/quantum run build",
-  "outputDirectory": "artifacts/quantum/dist",
+  "buildCommand": "pnpm --filter @workspace/quantum run build && cp -r artifacts/quantum/dist dist",
+  "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
