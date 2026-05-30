@@ -1,25 +1,9 @@
-#!/usr/bin/env bash
-# ─────────────────────────────────────────────────────────────────────────────
-#  github-sync.sh — Quantum Social Media Platform
-#  Kullanım: bash github-sync.sh
-#  Gereksinim: GITHUB_PAT Replit Secrets'a eklenmiş olmalı
-# ─────────────────────────────────────────────────────────────────────────────
-set -euo pipefail
+#!/bin/bash
 
-REPO_URL="https://github.com/TurkYoshi1905/quantum.git"
-BRANCH="main"
-COMMIT_MSG="sync: $(date '+%Y-%m-%d %H:%M:%S')"
-
-# ── GITHUB_PAT kontrolü ──────────────────────────────────────────────────────
-if [ -z "${GITHUB_PAT:-}" ]; then
-  echo ""
-  echo "❌  GITHUB_PAT bulunamadı."
-  echo "    Replit → Secrets bölümüne GITHUB_PAT adıyla token'ınızı ekleyin."
-  echo ""
-  exit 1
-fi
-
-AUTH_URL="https://${GITHUB_PAT}@github.com/TurkYoshi1905/quantum.git"
+# Değişkenler
+REPO_URL="https://TurkYoshi1905:${GITHUB_PAT}@github.com/TurkYoshi1905/quantum.git"
+TEMP_DIR="/tmp/github_sync_$$"
+WORKSPACE="/home/runner/workspace"
 
 echo ""
 echo "══════════════════════════════════════════"
@@ -27,56 +11,68 @@ echo "  🚀  Quantum → GitHub Sync"
 echo "══════════════════════════════════════════"
 echo ""
 
-# ── Git kimliği ──────────────────────────────────────────────────────────────
-git config user.email "quantum-sync@replit.app" 2>/dev/null || true
-git config user.name  "Quantum Sync"             2>/dev/null || true
-
-# ── Remote ayarla ────────────────────────────────────────────────────────────
-if git remote get-url origin &>/dev/null; then
-  git remote set-url origin "$AUTH_URL"
-  echo "✔  Remote güncellendi"
-else
-  git remote add origin "$AUTH_URL"
-  echo "✔  Remote eklendi"
+if [ -z "${GITHUB_PAT:-}" ]; then
+  echo "❌  GITHUB_PAT bulunamadı."
+  echo "    Replit → Secrets bölümüne GITHUB_PAT ekleyin."
+  exit 1
 fi
 
-# ── Değişiklikleri stage'e al ────────────────────────────────────────────────
+echo "GitHub'tan clone ediliyor..."
+rm -rf "$TEMP_DIR"
+git clone "$REPO_URL" "$TEMP_DIR"
+cd "$TEMP_DIR"
+
+# Git kullanıcı ayarları
+git config user.email "asfurkan140@gmail.com"
+git config user.name "TurkYoshi1905"
+
+echo "Dosyalar güncelleniyor..."
+
+# Klasörleri kopyala
+cp -r "$WORKSPACE/artifacts"  "$TEMP_DIR/"
+[ -d "$WORKSPACE/lib" ]      && cp -r "$WORKSPACE/lib"      "$TEMP_DIR/"
+[ -d "$WORKSPACE/.github" ]  && cp -r "$WORKSPACE/.github"  "$TEMP_DIR/"
+
+# Tekil dosyaları kopyala
+for f in \
+  package.json pnpm-lock.yaml pnpm-workspace.yaml \
+  tsconfig.json tsconfig.base.json \
+  vercel.json netlify.toml \
+  schema.sql \
+  README.md replit.md \
+  LICENSE .gitignore .gitattributes \
+  github-sync.sh; do
+  [ -f "$WORKSPACE/$f" ] && cp "$WORKSPACE/$f" "$TEMP_DIR/$f"
+done
+
+# node_modules ve dist klasörlerini sil (GitHub'a gitmemeli)
+find "$TEMP_DIR" -name "node_modules" -type d -prune -exec rm -rf {} + 2>/dev/null || true
+find "$TEMP_DIR" -name "dist" -type d -prune -exec rm -rf {} + 2>/dev/null || true
+
+COMMIT_MSG="${1:-sync: $(date '+%Y-%m-%d %H:%M:%S')}"
+
+# Commit
 git add -A
+git diff-index --quiet HEAD && echo "ℹ️   Değişiklik yok, commit atlanıyor." || git commit -m "$COMMIT_MSG"
 
-if git diff --cached --quiet; then
-  echo "ℹ️   Commit edilecek yeni değişiklik yok."
-else
-  git commit -m "$COMMIT_MSG"
-  echo "✔  Commit oluşturuldu: $COMMIT_MSG"
-fi
-
-# ── Push (önce normal, başarısız olursa rebase ile) ──────────────────────────
 echo ""
-echo "📤 GitHub'a gönderiliyor → branch: $BRANCH"
+echo "📤 GitHub'a yükleniyor → main"
 echo ""
 
-if git push origin "$BRANCH" 2>&1; then
+git push origin main
+
+STATUS=$?
+if [ $STATUS -eq 0 ]; then
   echo ""
   echo "✅  Başarıyla GitHub'a yüklendi!"
-  echo "    $REPO_URL"
+  echo "    https://github.com/TurkYoshi1905/quantum"
 else
   echo ""
-  echo "⚠️   Normal push başarısız. Uzak değişiklikler çekiliyor..."
-  git pull --rebase --allow-unrelated-histories origin "$BRANCH" || {
-    echo ""
-    echo "❌  Rebase sırasında çakışma oluştu."
-    echo "    Lütfen çakışmaları manuel olarak çözün ve tekrar çalıştırın."
-    exit 1
-  }
-  git push origin "$BRANCH"
-  echo ""
-  echo "✅  Rebase sonrası başarıyla yüklendi!"
-  echo "    $REPO_URL"
+  echo "❌  Push başarısız! (Çıkış kodu: $STATUS)"
 fi
 
-# ── Temizlik: PAT URL'ini güvenli URL ile değiştir ───────────────────────────
-git remote set-url origin "$REPO_URL"
+# Temizlik
+rm -rf "$TEMP_DIR"
 echo ""
-echo "🔒  Remote URL güvenli hale getirildi (PAT temizlendi)"
 echo "══════════════════════════════════════════"
 echo ""
