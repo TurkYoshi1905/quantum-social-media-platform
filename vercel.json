@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm -w run vercel-build",
+  "buildCommand": "pnpm --filter @workspace/quantum run build",
   "outputDirectory": "dist",
   "installCommand": "pnpm install",
   "rewrites": [
