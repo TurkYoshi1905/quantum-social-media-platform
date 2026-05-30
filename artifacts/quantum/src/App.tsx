@@ -1,7 +1,6 @@
 import { Switch, Route, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
@@ -87,12 +86,10 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Router />
-        </AuthProvider>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <Router />
+      </AuthProvider>
+      <Toaster />
     </QueryClientProvider>
   );
 }
