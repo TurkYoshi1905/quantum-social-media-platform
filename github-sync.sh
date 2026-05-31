@@ -38,7 +38,7 @@ for f in \
   package.json pnpm-lock.yaml pnpm-workspace.yaml \
   tsconfig.json tsconfig.base.json \
   vercel.json netlify.toml \
-  schema.sql \
+  schema.sql quantum-setup.sql \
   README.md replit.md \
   LICENSE .gitignore .gitattributes \
   github-sync.sh; do
