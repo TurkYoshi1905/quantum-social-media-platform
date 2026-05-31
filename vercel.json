@@ -2,5 +2,8 @@
   "buildCommand": "pnpm --filter @workspace/quantum run build",
   "outputDirectory": "artifacts/quantum/dist",
   "installCommand": "pnpm install",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
