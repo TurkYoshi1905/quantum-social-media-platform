@@ -21,12 +21,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (data) setCurrentUser(data);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (data) setCurrentUser(data);
+    } catch {
+      // profil alınamazsa sessizce devam et
+    }
   };
 
   const refreshProfile = async () => {
@@ -34,28 +38,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s?.user.id) {
-        fetchProfile(s.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
+    // Güvenlik: en fazla 8 saniye bekle, sonra loading'i kapat
+    const safetyTimer = setTimeout(() => setLoading(false), 8000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
         setSession(s);
         if (s?.user.id) {
-          await fetchProfile(s.user.id);
-        } else {
-          setCurrentUser(null);
+          return fetchProfile(s.user.id);
         }
+      })
+      .catch(() => {
+        // Supabase erişilemez — giriş yapılmamış gibi davran
+      })
+      .finally(() => {
+        clearTimeout(safetyTimer);
         setLoading(false);
-      }
-    );
+      });
 
-    return () => subscription.unsubscribe();
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, s) => {
+      setSession(s);
+      if (s?.user.id) {
+        await fetchProfile(s.user.id);
+      } else {
+        setCurrentUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   const logout = async () => {
